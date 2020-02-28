@@ -1,0 +1,39 @@
+---
+title: "trawl_model_test"
+author: "Cori Lopazanski"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This document will explore the modeling options for the trawl data prior to adding it to the Shiny app.
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+
+# Still issues with writing to csv: use trawl_all dataframe from trawl_data_wrangling 
+trawl <- trawl_all
+```
+
+
+Now for some modeling attempts:
+
+```{r}
+sp_list <- unique(trawl$field_id)
+
+trawl_sub <- trawl %>% 
+  filter(field_id == "pinfish") %>% 
+  mutate(date = ymd(date),
+         doy = yday(date))
+
+lm1 <- lm(log(catch_100m + 1) ~ doy + I(doy^2) + I(doy^3), data = trawl_sub)
+
+```
+
