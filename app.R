@@ -9,19 +9,20 @@ library(shiny)
 library(shinydashboard)
 library(shinythemes)
 library(lubridate)
+library(DT)
+library(kableExtra)
 
 
-# test
+# Read in the Data
 
-trawl <- read_csv("trawl_tidy.csv") %>% 
+trawl <- read_csv("trawl_subset.csv") %>% 
   mutate(date = ymd(date),
          month = month(date, label = TRUE),
          year = year(date)) %>% 
   filter(habitat %in% c("sea grass", "salt marsh", "mud flat", "creek"))
 
 trawl$field_id[trawl$field_id == "Eucinostomus"] <- "mojarra"
-trawl <- read_csv("trawl_tidy.csv") %>% 
-  mutate(date = ymd(date))
+
 
 # 2. User Interface
 ui <- navbarPage("Seasonality in NC Estuarine Communities",
@@ -31,17 +32,22 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                           p("Some information about the app here...")),
                  tabPanel("Explore the Catch",
                           sidebarLayout(
-                            sidebarPanel("Choose your options:",
-                                         # dropdown menu for species
+                            sidebarPanel(# dropdown menu for species
                                          selectInput(inputId = "species",
-                                                     label = "Select species:",
+                                                     label = "Species:",
                                                      choices = c(unique(trawl$field_id)),
                                                      selected = "pinfish"),
-                                                     choices = c(unique(trawl$species_name))),
+                                         #biomass/catch selection
+                                         radioButtons("data_type",
+                                                      label = "Data Type:",
+                                                      choiceNames = c("Abundance", "Biomass"),
+                                                      choiceValues = c("catch_100m", "biomass_100m")),
+                                         # habitat checkbox
                                          checkboxGroupInput("habitat",
-                                                            label = "Choose habitat(s):",
+                                                            label = "Habitat(s):",
                                                             choices = c(unique(trawl$habitat)),
                                                             selected = "sea grass"),
+                                         # date slider
                                          sliderInput("date",
                                                      label = "Date Range:",
                                                      min = as.Date("2010-07-01"), 
@@ -51,9 +57,9 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                             mainPanel("Catch per unit effort:",
                                       plotOutput(outputId = "cpue_plot"),
                                       "Monthly",
-                                      plotOutput(outputId = "cpue_monthly_plot")),
-                            mainPanel("Graph Title Here, Probably?",
-                                      plotOutput(outputId = "cpue_plot"))),
+                                      plotOutput(outputId = "cpue_monthly_plot"),
+                                      "Data Table",
+                                      DT::dataTableOutput(outputId = "table")))),
                  tabPanel("Model",
                           sidebarLayout(
                             sidebarPanel("Choose your options:",
@@ -61,10 +67,10 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                                          selectInput(inputId = "species_modeling",
                                                      label = "Select species:",
                                                      choices = c(unique(trawl$field_id)))),
-                                                     choices = c(unique(trawl$species_name))),
                             mainPanel("Main Panel Title Here",
                                       # Have outputs for model page here
                             )))
+                          )
 
 # 3. Server
 
@@ -73,25 +79,27 @@ server <- function(input, output) {
   cpue_select <- reactive({
     trawl %>% 
       filter(field_id == input$species) %>% 
-      filter(species_name == input$species) %>%
       filter(habitat == input$habitat) %>% 
-      filter(between(date, input$date[1], input$date[2]))
+      filter(between(date, input$date[1], input$date[2])) 
+      #select(field_id, habitat, date, input$data_type)
   })
-  
   
   
   # Output 1: cpue_plot
   output$cpue_plot <- renderPlot({
-    ggplot(data = cpue_select(), aes(x = date, y = num)) +
+    ggplot(data = cpue_select(), aes(x = date, y = !!as.name(input$data_type))) +
       geom_point(aes(color = year), size = 3)
   })
 
   
   # Output 2: cpue_monthly_plot
   output$cpue_monthly_plot <- renderPlot({
-    ggplot(data = cpue_select(), aes(x = month, y = num)) +
+    ggplot(data = cpue_select(), aes(x = month, y = !!as.name(input$data_type))) +
       geom_point(aes(color = year))
   })
+  
+  # Output 3: table of values to see what's happening
+  output$table <- DT::renderDataTable({data.frame(cpue_select())})
   
 }
 

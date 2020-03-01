@@ -116,7 +116,6 @@ trawl_all <- left_join(trawl_tidy, sp_names, by = "species_name")
 trawl_na <- trawl_all %>% 
   filter(is.na(common_name)) 
 
-# write_csv(trawl_all, "trawl_tidy.csv")
 
 ```
 
@@ -136,21 +135,32 @@ trawl_nc <- trawl_all %>%
 
 # Explore counts for each species to narrow down by number caught
 
-trawl_counts <- trawl_all %>% 
+# See which families are most represented
+trawl_families <- trawl_nc %>% 
   group_by(family) %>% 
   summarize(total_number = sum(num, na.rm = TRUE)) %>% 
   arrange(-total_number) %>% 
-  head(35)
+  head(25)
 
-trawl_counts2 <- trawl_all %>% 
+# Counts from the top 35 represented families
+trawl_topsp <- trawl_nc %>% 
   filter(family %in% trawl_counts$family) %>% 
   group_by(field_id) %>%
   summarize(total_number = sum(num, na.rm = TRUE)) %>% 
-  arrange(-total_number)
+  arrange(-total_number) %>% 
+  head(20)
   
 ```
 
 
+# Filter by those top species: took 790k obs to 290k (just NC) obs to 30k obs
+
+```{r}
+trawl_subset <- trawl_nc %>% 
+  filter(field_id %in% trawl_topsp$field_id)
+
+write_csv(trawl_subset, "trawl_subset.csv")
+```
 
 
 

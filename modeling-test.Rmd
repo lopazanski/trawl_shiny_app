@@ -22,18 +22,153 @@ library(lubridate)
 trawl <- trawl_all
 ```
 
-
-Now for some modeling attempts:
+Some modeling attempts
 
 ```{r}
-sp_list <- unique(trawl$field_id)
+# Testing out modeling before adding to the app
 
-trawl_sub <- trawl %>% 
-  filter(field_id == "pinfish") %>% 
+trawl_test <- trawl %>% 
+  filter(species_name == "lag_rho") %>% 
   mutate(date = ymd(date),
-         doy = yday(date))
+         doy = yday(date)) %>% 
+  filter(habitat %in% c("salt marsh", "marsh interface", "sea grass", "mud flat", "interface", "creek"))
 
-lm1 <- lm(log(catch_100m + 1) ~ doy + I(doy^2) + I(doy^3), data = trawl_sub)
+trawl_test$habitat[trawl_test$habitat == "marsh interface"] <- "interface"
+
+
+
+```
+
+
+```{r}
+# Log transform the data to make more normal?
+# Catch data
+ggplot(data = trawl_test) +
+  geom_histogram(aes(x = catch_100m))
+
+ggplot(data = trawl_test %>% 
+         mutate(log_catch = log(catch_100m))) +
+  geom_histogram(aes(x = log_catch))
+
+ggplot(data = trawl_test %>% 
+         mutate(log_catch = log(catch_100m))) +
+  geom_qq(aes(sample = log_catch))
+
+
+ggplot(data = trawl_test) +
+  geom_histogram(aes(x = biomass_100m))
+
+ggplot(data = trawl_test %>% 
+         mutate(log_catch = log(biomass_100m))) + 
+  geom_histogram(aes(x = log_catch))
+
+
+```
+
+
+
+```{r}
+
+habitat_counts <- trawl_test %>% 
+  group_by(habitat) %>% 
+  summarize(ntow = length(unique(tow_id)),
+            total_catch = sum(num, na.rm = TRUE),
+            total_biomass = sum(wt, na.rm = TRUE)
+            )
+
+trawl_sg <- trawl_test %>% 
+  filter(habitat == "sea grass")
+
+# For presence/absence makes most senses to use a binomial logistic regression model:
+sg_blr <- glm(pres_abs ~ doy, family = "binomial", data = trawl_test)
+summary(sg_blr)
+
+# Predictions
+# Predict for seagrass only
+sg_predict <- data.frame(doy = c(0:366))
+
+full_predict <- predict(sg_blr, newdata = sg_predict, type = "response", se.fit = TRUE) 
+
+sg_df <- data.frame(sg_predict, 
+                       full_predict$fit, 
+                       full_predict$se.fit)
+
+colnames(sg_df) <- c("doy", "probability", "se")
+
+ggplot(data = sg_df, aes(x = doy, y = probability)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = probability - se, ymax = probability + se), alpha = 0.3) +
+  theme_minimal()
+```
+
+## From Jim
+
+```{r}
+for(i in 1:length(spp_list)){ # run a forloop from 1 to the length of the species vector
+  species <- spp_list[i] # identify the species for loop i
+  trawl_sub <- trawl_melt[trawl_melt$species == species,] # restrict the data to just the species of interest
+  
+  # Fit models
+  mod_abun <- lm(log(cpue + 1)~doy_values + I(doy_values^2) + I(doy_values^3), data=trawl_sub) # abundance model to full data set
+  mod_abun2 <- lm(log(cpue + 1)~doy_values + I(doy_values^2), data=trawl_sub[trawl_sub$pres_abs==1,]) # abundance model to only positive catches
+  mod_PA <- brglm(pres_abs~doy_values + I(doy_values^2), family="binomial", data=trawl_sub) # binomial model to presence-absence data
+  
+  newdata <- data.frame(doy_values = c(min(trawl_sub$doy_values):max(trawl_sub$doy_values))) # create a vector of doy to predict to_for visualizing curves and finding the peak value
+  pred_values <- data.frame(cbind(newdata, abunMod = predict(mod_abun, newdata), abunMod2 = predict(mod_abun2, newdata), PAmod = predict(mod_PA, type='response', newdata))) # combine the doy values with predictions from each model
+  
+  range_adj <- c(min(trawl_sub$doy_values[trawl_sub$pres_abs==1]), max(trawl_sub$doy_values[trawl_sub$pres_abs==1])) # range where species is present, to adjust where mod_abun2 fits_in other words, we don't care what the model predicts outside of the doy range that went into making the model, could be wacking values outside of the range
+  # below, convert predicted values outside of the relevant range into NAs
+  pred_values$abunMod2[pred_values$doy_values < range_adj[1]] <- NA
+  pred_values$abunMod2[pred_values$doy_values > range_adj[2]] <- NA
+  
+  # determine the peak values for each model
+  maxAbun <- pred_values$doy_values[pred_values$abunMod==max(pred_values$abunMod)]
+  maxAbun2 <- pred_values$doy_values[!is.na(pred_values$abunMod2) & pred_values$abunMod2==max(pred_values$abunMod2, na.rm=T)]
+  maxPA <- pred_values$doy_values[pred_values$PAmod==max(pred_values$PAmod)]
+  
+  # plot figures
+  plot(log(cpue + 1)~doy_values, trawl_sub)
+  title(main=species)
+  points(abunMod~doy_values, type='l', data=pred_values)
+  abline(v=maxAbun, lty='dashed')
+  points(abunMod2~doy_values, type='l', col='red', data=pred_values)
+  abline(v=maxAbun2, col='red', lty='dashed')
+  
+  plot(pres_abs~doy_values, trawl_sub)
+  points(PAmod~doy_values, type='l', data=pred_values)
+  abline(v=maxPA, lty='dashed')
+  
+  # add the peak values into the dataframe, that will ultimately get saved
+  peak_catch[i,] <- data.frame(peak_abun = maxAbun, peak_abun2 = maxAbun2, peak_PA = maxPA, numbZeros = nrow(trawl_sub[trawl_sub$pres_abs==0,])) 
+}
+```
+
+What I want: output of two graphs with models
+1. log(cpue per 100m towed) vs julian day
+2. pres/abs vs. julian day
+
+Have the data points lined up 
+- Black line is with all the data
+- Red line is with only positive data
+```{r}
+# Select species, then: (for this example, just with pinfish, in reality, would use input
+#  Using "trawl_nc" data frame from the trawl_data_wrangling.Rmd
+# Tell R to restrict the data to just the species of interest, and just seagrass
+trawl_model <- trawl_nc %>% 
+  filter(field_id == "pinfish")
+
+# Fit the models to the data:
+# Abundance Model
+# Abundance Model for only the positive catches
+# Binomial Presence/Absence Model
+
+# Create vector to predict values
+
+# Make & save predictions
+
+# Bind predictions into a data frame
+
+# Make plots with the normal and predicted curves
 
 ```
 
