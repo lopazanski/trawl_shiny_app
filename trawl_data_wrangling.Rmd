@@ -12,16 +12,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Tidying Trawl Data
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 # Attach Packages and Read in the Data
 library(tidyverse)
 library(janitor)
+library(lubridate)
 
 trawl_test <- read_csv("trawl_shiny_updated_21Feb2020.csv") %>% 
   clean_names()
-
-
-
 ```
 
 
@@ -56,7 +54,9 @@ trawl_filter <- trawl %>%
 # For biomass_100m column: g per 100m tow
 trawl_tidy <- full_join(trawl_filter, trawl_wide, by = "sp_id") %>%
   select(-sp_id, -values, -type) %>%
-  mutate(pres_abs = ifelse(num == 0, 0, 1),
+  mutate(date = ymd(date),
+         doy = yday(date),
+         pres_abs = ifelse(num == 0, 0, 1),
          catch_100m = num/distance_m*100,
          biomass_100m = wt/distance_m*100)
 
@@ -78,9 +78,6 @@ trawl_tidy$species_name[trawl_tidy$species_name == "lip_spp"] <- "lib_spp"
 trawl_tidy$species_name[trawl_tidy$species_name == "shrimp"] <- "unid_shrimp"
 trawl_tidy$species_name[trawl_tidy$species_name == "camarodonta"] <- "unid_sea_urchin"
 trawl_tidy$species_name[trawl_tidy$species_name == "lut_gri_syn"] <- "lut_spp"
-
-
-
 
 ```
 
@@ -113,9 +110,17 @@ sp_names <- master_sp_tidy %>%
 trawl_all <- left_join(trawl_tidy, sp_names, by = "species_name")
 
 # Check NAs - want this to have ZERO! YAY!
-trawl_na <- trawl_all %>% 
-  filter(is.na(common_name)) 
+#trawl_na <- trawl_all %>% 
+ # filter(is.na(common_name)) 
 
+
+```
+
+```{r}
+# Remove some of the old dfs to make space in R's brain and mine
+rm(master_sp_list, master_sp_tidy, sp_names, trawl, trawl_filter, trawl_na, trawl_test, trawl_wide, trawl_tidy)
+
+# All that's left is trawl_all - aka our main dataframe based on everything done so far
 
 ```
 
@@ -123,10 +128,6 @@ trawl_na <- trawl_all %>%
 ## Narrow down the data a little bit - too hectic!
 
 ```{r}
-# Remove some of the old dfs to make space in R's brain and mine
-rm(master_sp_list, master_sp_tidy, sp_names, trawl, trawl_filter, trawl_na, trawl_test, trawl_wide, trawl_tidy)
-
-# All that's left is trawl_all - aka our main dataframe based on everything done so far
 
 # Should probably just focus on NC:
 trawl_nc <- trawl_all %>% 
@@ -144,7 +145,7 @@ trawl_families <- trawl_nc %>%
 
 # Counts from the top 35 represented families
 trawl_topsp <- trawl_nc %>% 
-  filter(family %in% trawl_counts$family) %>% 
+  filter(family %in% trawl_families$family) %>% 
   group_by(field_id) %>%
   summarize(total_number = sum(num, na.rm = TRUE)) %>% 
   arrange(-total_number) %>% 
