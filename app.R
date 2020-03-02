@@ -29,8 +29,16 @@ trawl$field_id[trawl$field_id == "Eucinostomus"] <- "mojarra"
 ui <- navbarPage("Seasonality in NC Estuarine Communities",
                  theme = shinytheme("spacelab"),
                  tabPanel("About",
-                          h1("About this App"),
-                          p("Some information about the app here...")),
+                          sidebarLayout(
+                            sidebarPanel(),
+                            mainPanel(img(src = "unc_ims_logo.jpg", height = 70, width = 230),
+                                      h3("Summary"),
+                                      p("This app allows the user to explore the composition and seasonality of North Carolina estuarine fish and invertebrate communities. It uses graphs, tables, and predictive modeling to illustrate trends in abundance, biomass, and species diversity in different habitats over time."),
+                                      br(),
+                                      h3("Data"),
+                                      p("The data used for this app was collected by the Fisheries Ecology and Oceanography Lab at the University of North Carolina at Chapel Hill’s Institute of Marine Sciences (UNC-IMS) between 2010 and 2018. Funding for the project was provided by the North Carolina Marine Resources Fund (CRFL). Estuarine communities were surveyed in Back and Core Sounds in North Carolina. The area was selected because it represents a range of environmental conditions (wave exposure and fetch direction, salinity, vegetation patchiness, etc.) and contained target sea grass meadows."),
+                                      br(),
+                                      p("Monthly surveys were conducted during day light hours between May - November annually from 2010-2019. This corresponded with the periods when most winter and spring spawned fishes inhabit shallow water estuarine habitats. Organisms were collected using a 5-m otter trawl with a 4-seam balloon design, with floating and lead lines but without a tickler chain. Trawls were conducted for 2 min at 3-4 km/h, and organisms were counted and each species weighed to the nearest gram. During each trawl, measures of salinity, temperature, habitat type, depth, and lat/long were also recorded.")))),
                  tabPanel("Explore the Catch",
                           sidebarLayout(
                             sidebarPanel(# dropdown menu for species
@@ -250,10 +258,7 @@ server <- function(input, output) {
   output$pres_abs_plot <- renderPlot({
     pres_plot()
   })
-  
-  
-  
-  
+ 
   
   
 }
