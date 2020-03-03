@@ -18,14 +18,15 @@ library(tidyverse)
 library(janitor)
 library(lubridate)
 
-trawl_test <- read_csv("trawl_shiny_updated_21Feb2020.csv") %>% 
+trawl_test <- read_csv("trawl_shiny_updated_2Mar2020.csv") %>% 
   clean_names()
+
+  
 ```
 
 
 Basic Trawl Data Wrangling - Get into tidy format silly data
 ```{r}
-# Wrangling
 trawl <- trawl_test %>% 
   select(tow_id, date, project, site, habitat:distance_m, depth_m:sal_ppt, num_aca_bah:wt_jellyfish) %>% 
   pivot_longer(num_aca_bah:wt_jellyfish,
@@ -49,17 +50,8 @@ trawl_filter <- trawl %>%
   filter(type == "num")
 
 # Join the filtered ID dataset with the widened subset
-# For pres_abs column: if number is zero = absent (0), if number is nonzero = present
-# For catch_100m column: number per 100m tow
-# For biomass_100m column: g per 100m tow
 trawl_tidy <- full_join(trawl_filter, trawl_wide, by = "sp_id") %>%
-  select(-sp_id, -values, -type) %>%
-  mutate(date = ymd(date),
-         doy = yday(date),
-         pres_abs = ifelse(num == 0, 0, 1),
-         catch_100m = num/distance_m*100,
-         biomass_100m = wt/distance_m*100)
-
+  select(-sp_id, -values, -type) 
 
 # Fix some of the species names - changed or codes different from master list
 trawl_tidy$species_name[trawl_tidy$species_name == "gerreidae"] <- "euc_spp"
@@ -78,6 +70,44 @@ trawl_tidy$species_name[trawl_tidy$species_name == "lip_spp"] <- "lib_spp"
 trawl_tidy$species_name[trawl_tidy$species_name == "shrimp"] <- "unid_shrimp"
 trawl_tidy$species_name[trawl_tidy$species_name == "camarodonta"] <- "unid_sea_urchin"
 trawl_tidy$species_name[trawl_tidy$species_name == "lut_gri_syn"] <- "lut_spp"
+
+
+
+#Fix the NAs in the distance column: sometimes distance wasn't recorded, but have speed and duration so can manually calculate the distance
+trawl_distance <- trawl_test %>% 
+  filter(is.na(distance_m) & !is.na(duration_min_sec) & !is.na(speed_km_hr))%>% 
+  mutate(duration_min_sec = as.character(duration_min_sec)) %>% 
+  separate(duration_min_sec, 
+           into = c("dur_min", "dur_sec"),
+           sep = "\\.") %>% 
+  mutate(dur_min = as.numeric(dur_min),
+         dur_sec = as.numeric(dur_sec)) %>% 
+  mutate(dur_sec = if_else(is.na(dur_sec), 0, dur_sec)) %>% 
+  mutate(
+    dist_calc = (dur_min*60+dur_sec)*(1000/3600)*speed_km_hr
+  ) %>% 
+  select(tow_id, dist_calc)
+
+trawl_dist_corrected <- full_join(trawl_tidy, trawl_distance, by = "tow_id") %>%
+  mutate(distance_m = if_else(is.na(distance_m) & !is.na(duration_min_sec) & !is.na(speed_km_hr), dist_calc, distance_m))
+
+# Check it? Should be zero!
+trawl_na <- trawl_dist_corrected %>% 
+  filter(is.na(distance_m) & !is.na(duration_min_sec) & !is.na(speed_km_hr))
+
+
+# For pres_abs column: if number is zero = absent (0), if number is nonzero = present
+# For catch_100m column: number per 100m tow
+# For biomass_100m column: g per 100m tow
+
+trawl_tidy <- trawl_dist_corrected %>%
+ mutate(date = ymd(date),
+        doy = yday(date),
+        pres_abs = ifelse(num == 0, 0, 1),
+        catch_100m = num/distance_m*100,
+       biomass_100m = wt/distance_m*100)
+
+
 
 ```
 
@@ -118,11 +148,14 @@ trawl_all <- left_join(trawl_tidy, sp_names, by = "species_name")
 
 ```{r}
 # Remove some of the old dfs to make space in R's brain and mine
-rm(master_sp_list, master_sp_tidy, sp_names, trawl, trawl_filter, trawl_na, trawl_test, trawl_wide, trawl_tidy)
+rm(master_sp_list, master_sp_tidy, sp_names, trawl, trawl_filter, trawl_na, trawl_test, trawl_wide, trawl_tidy, trawl_distance, trawl_dist_corrected)
 
 # All that's left is trawl_all - aka our main dataframe based on everything done so far
 
 ```
+
+
+
 
 
 ## Narrow down the data a little bit - too hectic!

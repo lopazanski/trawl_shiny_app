@@ -30,7 +30,16 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                  theme = shinytheme("spacelab"),
                  tabPanel("About",
                           sidebarLayout(
-                            sidebarPanel(),
+                            sidebarPanel(h4("How to use:"),
+                                         br(),
+                                         h5("1. Read about the project"),
+                                         p("This page contains important information about how and when data was collected."),
+                                         br(),
+                                         h5("2. Explore the catch"),
+                                         p("In this section, explore the data by selecting various characteristics. Choose the species, habitat, and date range for the data, as well as whether you would like the information displayed as biomass (g) or abundance (number of individuals)."),
+                                         br(),
+                                         h5("3. Model"),
+                                         p("Use this section to explore the trend for a given species across certain times in the year.")),
                             mainPanel(img(src = "unc_ims_logo.jpg", height = 70, width = 230),
                                       h3("Summary"),
                                       p("This app allows the user to explore the composition and seasonality of North Carolina estuarine fish and invertebrate communities. It uses graphs, tables, and predictive modeling to illustrate trends in abundance, biomass, and species diversity in different habitats over time."),
@@ -63,12 +72,18 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                                                      max = as.Date("2017-11-17"),
                                                      value = c(as.Date("2010-07-01"), as.Date("2017-11-17")),
                                                      timeFormat = "%F")),
-                            mainPanel("Catch per unit effort:",
-                                      plotOutput(outputId = "cpue_plot"),
-                                      "Monthly",
-                                      plotOutput(outputId = "cpue_monthly_plot"),
-                                      "Data Table",
-                                      DT::dataTableOutput(outputId = "table")))),
+                            mainPanel(
+                              h4("Exploring catch per unit effort in estuarine habitats"),
+                              p("These graphs illustrate trends in catch per unit effort for the variables selected, where effort is standardized by each 100 meters towed."),
+                              plotOutput(outputId = "cpue_plot"),
+                              p(strong("Figure 1."), "Catch per unit effort (CPUE) for the selected species, habitat, and date range. Color transition from dark to light indicates earlier to later years."),
+                              br(),
+                              plotOutput(outputId = "cpue_monthly_plot"),
+                              p(strong("Figure 2."), "Monthly changes in catch per unit effort (CPUE) for selected species, habitat, and date range. Darker shades indicate earlier years, and lighter shades indicate more recent years."),
+                              plotOutput(outputId = "monthly_averages_plot"),
+                              "Data Tables",
+                              DT::dataTableOutput(outputId = "monthly_table"),
+                              DT::dataTableOutput(outputId = "table")))),
                  tabPanel("Model",
                           sidebarLayout(
                             sidebarPanel(# more options here for modeling portion
@@ -97,7 +112,18 @@ server <- function(input, output) {
       filter(field_id == input$species) %>% 
       filter(habitat == input$habitat) %>% 
       filter(between(date, input$date[1], input$date[2])) 
-      #select(field_id, habitat, date, input$data_type)
+  })
+  
+  # Selection 2:
+  average <- reactive ({
+    trawl %>% 
+      filter(field_id == input$species) %>% 
+      filter(habitat == input$habitat) %>% 
+      filter(between(date, input$date[1], input$date[2])) %>% 
+      group_by(month) %>% 
+      summarize(
+        mean = mean(!!as.name(input$data_type), na.rm = TRUE)
+      )
   })
   
   # Output 1: cpue_plot
@@ -113,7 +139,16 @@ server <- function(input, output) {
       geom_point(aes(color = year))
   })
   
-  # Output 3: table of values to see what's happening
+  # Output 3: monthly_averages_plot
+  output$monthly_averages_plot <- renderPlot({
+    ggplot(data = average(), group = year) +
+      geom_point(aes(x = month, y = mean))
+  })
+  
+  # Output 4: other table for testing
+  output$monthly_table <- DT::renderDataTable({data.frame(average())})
+  
+  # Output 5: table of values to see what's happening
   output$table <- DT::renderDataTable({data.frame(cpue_select())})
   
   ######################################################

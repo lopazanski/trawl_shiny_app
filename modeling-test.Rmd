@@ -233,3 +233,30 @@ ggplot(data = model_predict) +
 
 ```
 
+Try to fix monthly averages graph
+```{r}
+test <- read_csv("trawl_subset.csv")
+
+
+
+monthly <- test %>% 
+  filter(field_id == "pinfish") %>% 
+  filter(habitat == "sea grass") %>% 
+  select(tow_id, date, catch_100m) %>% 
+  mutate(
+    date = ymd(date),
+    yr = as.factor(year(date)),
+    mo = month(date, label = TRUE)
+  ) %>% 
+  group_by(yr, mo) %>% 
+  summarize(
+    mean = mean(catch_100m, na.rm = TRUE),
+    samples = n())
+
+
+ggplot(data = monthly) +
+  geom_path(aes(x = mo, y = mean, group = yr, color = yr))
+
+  
+```
+
