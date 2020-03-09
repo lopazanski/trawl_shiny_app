@@ -11,6 +11,8 @@ library(shinythemes)
 library(lubridate)
 library(DT)
 library(kableExtra)
+library(paletteer)
+library(cartography)
 
 
 # Read in the Data
@@ -81,6 +83,11 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                               plotOutput(outputId = "cpue_monthly_plot"),
                               p(strong("Figure 2."), "Monthly changes in catch per unit effort (CPUE) for selected species, habitat, and date range. Darker shades indicate earlier years, and lighter shades indicate more recent years."),
                               plotOutput(outputId = "monthly_averages_plot"),
+                              
+                              p(strong("Figure 3."), "Monthly average for catch per unit effort (CPUE) for selected species, habitat, and date range. Error bars indicate standard error."),
+                              br(),
+                              plotOutput(outputId = "monthly_yearly_plot"),
+                              br(),
                               "Data Tables",
                               DT::dataTableOutput(outputId = "monthly_table"),
                               DT::dataTableOutput(outputId = "table")))),
@@ -93,8 +100,12 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                                                      selected = "pinfish")),
                             mainPanel("Abundance Graph",
                                       plotOutput(outputId = "abundance_plot"),
+                                      p(strong("Figure 1."), "Change in abundance of selected species for a given day of year. Points indicate catch data for the selected species for individual trawls. Generalized linear models were used to estimate abundance on any given day based on all catches (black line) and positive catches (red line). Shaded areas represent standard error for each."),
+                                      br(),
+                                      br(),
                                       "Presence/Absence Graph",
-                                      plotOutput(outputId = "pres_abs_plot")
+                                      plotOutput(outputId = "pres_abs_plot"),
+                                      p(strong("Figure 2."), "Probability of presence of selected species for a given day of year. Points indicate presence/absence (1 or 0, respectively) of selected species during an individual trawl. Black line indicates binomial regression model predicting the probability of occurrence of a species on a given day, with the black shaded error illustrating standard error.")
                             )))
                           )
 
@@ -106,7 +117,7 @@ server <- function(input, output) {
   # CATCH EXPLORATION PAGE
   ######################################################
   
-  # Selection 1: 
+  # Selection 1: selections for first two plots
   cpue_select <- reactive({
     trawl %>% 
       filter(field_id == input$species) %>% 
@@ -114,13 +125,27 @@ server <- function(input, output) {
       filter(between(date, input$date[1], input$date[2])) 
   })
   
-  # Selection 2:
+  # Selection 2: selections for monthly average plot
   average <- reactive ({
     trawl %>% 
       filter(field_id == input$species) %>% 
       filter(habitat == input$habitat) %>% 
       filter(between(date, input$date[1], input$date[2])) %>% 
       group_by(month) %>% 
+      summarize(
+        mean = mean(!!as.name(input$data_type), na.rm = TRUE),
+        se = sd(!!as.name(input$data_type), na.rm = TRUE)/sqrt(n())
+      )
+  })
+  
+  # Selection 3: selections for yearly seasonality plot
+  month <- reactive ({
+    trawl %>% 
+      filter(field_id == input$species) %>% 
+      filter(habitat == input$habitat) %>% 
+      filter(between(date, input$date[1], input$date[2])) %>% 
+      mutate(yr = as.factor(year)) %>% 
+      group_by(yr, month) %>% 
       summarize(
         mean = mean(!!as.name(input$data_type), na.rm = TRUE)
       )
@@ -129,20 +154,48 @@ server <- function(input, output) {
   # Output 1: cpue_plot
   output$cpue_plot <- renderPlot({
     ggplot(data = cpue_select(), aes(x = date, y = !!as.name(input$data_type))) +
-      geom_point(aes(color = year), size = 3)
+      geom_point(aes(color = year), size = 3, show.legend = FALSE) +
+      labs(
+        x = NULL,
+        y = "Catch (# individuals or grams per 100m towed)"
+      ) +
+      theme_minimal() +
+      scale_color_paletteer_c("ggthemes::Blue")
   })
 
   
   # Output 2: cpue_monthly_plot
   output$cpue_monthly_plot <- renderPlot({
     ggplot(data = cpue_select(), aes(x = month, y = !!as.name(input$data_type))) +
-      geom_point(aes(color = year))
+      geom_jitter(aes(color = year), size = 3) +
+      labs(
+        x = NULL,
+        y = "Catch (# indivudals or grams per 100m towed)",
+        color = "Year"
+      ) +
+      theme_minimal() +
+      scale_color_paletteer_c("ggthemes::Blue")
+  })
+  
+  # Output 3: monthly_yearly_plot
+  output$monthly_yearly_plot <- renderPlot({
+    ggplot(data = month()) +
+      geom_point(aes(x = month, y = mean, color = yr), size = 3) +
+      geom_line(aes(x = month, y = mean, group = yr, color = yr)) +
+      theme_minimal() +
+      scale_color_paletteer_d("cartography::blue.pal")
   })
   
   # Output 3: monthly_averages_plot
   output$monthly_averages_plot <- renderPlot({
     ggplot(data = average(), group = year) +
-      geom_point(aes(x = month, y = mean))
+      geom_point(aes(x = month, y = mean), size = 3) +
+      geom_errorbar(aes(x = month, ymin = mean-se, ymax = mean+se), width = 0.2) +
+      labs(
+        x = NULL,
+        y = "Mean Catch (# individuals or grams per 100m towed)"
+      ) +
+      theme_minimal()
   })
   
   # Output 4: other table for testing

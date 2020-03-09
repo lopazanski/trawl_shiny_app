@@ -250,8 +250,11 @@ monthly <- test %>%
   ) %>% 
   group_by(yr, mo) %>% 
   summarize(
-    mean = mean(catch_100m, na.rm = TRUE),
-    samples = n())
+    mean = mean(catch_100m, na.rm = TRUE),  
+    samples = n(),
+    sd = sd(catch_100m, na.rm = TRUE),
+    se = sd(catch_100m, na.rm = TRUE)/sqrt(samples)
+  )
 
 
 ggplot(data = monthly) +
