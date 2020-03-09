@@ -26,9 +26,18 @@ trawl$field_id[trawl$field_id == "Eucinostomus"] <- "mojarra"
 
 
 # 2. User Interface
-ui <- navbarPage("Seasonality in NC Estuarine Communities",
+ui <- navbarPage(title=div(img(src="lab_logo.png", width = 80, height = 80),"Seasonality in NC Estuarine Communities"),
+                 tags$head(
+                   tags$style(HTML('.navbar-nav > li > a, .navbar-brand {
+                            padding-top:5px !important; 
+                            padding-bottom:10px !important;
+                            height: 60px;
+                            }
+                           .navbar {min-height:60px !important;}')),
+                 ),
                  theme = shinytheme("spacelab"),
                  tabPanel("About",
+                          tags$head(tags$style( HTML(' .nav {margin-top:30px;}'))),
                           sidebarLayout(
                             sidebarPanel(h4("How to use:"),
                                          br(),
@@ -80,10 +89,7 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                               br(),
                               plotOutput(outputId = "cpue_monthly_plot"),
                               p(strong("Figure 2."), "Monthly changes in catch per unit effort (CPUE) for selected species, habitat, and date range. Darker shades indicate earlier years, and lighter shades indicate more recent years."),
-                              plotOutput(outputId = "monthly_averages_plot"),
-                              "Data Tables",
-                              DT::dataTableOutput(outputId = "monthly_table"),
-                              DT::dataTableOutput(outputId = "table")))),
+                              plotOutput(outputId = "monthly_averages_plot")))),
                  tabPanel("Model",
                           sidebarLayout(
                             sidebarPanel(# more options here for modeling portion
@@ -91,11 +97,21 @@ ui <- navbarPage("Seasonality in NC Estuarine Communities",
                                                      label = "Select species:",
                                                      choices = c(unique(trawl$field_id)),
                                                      selected = "pinfish")),
-                            mainPanel("Abundance Graph",
-                                      plotOutput(outputId = "abundance_plot"),
-                                      "Presence/Absence Graph",
-                                      plotOutput(outputId = "pres_abs_plot")
-                            )))
+                            mainPanel(
+                              h4("Modeling seasonal abundance of estuarine organisms in seagrass habitats "),
+                              p("These graphs show..."),
+                              plotOutput(outputId = "abundance_plot"),
+                              p(strong("Figure 1."), "Catch per unit effort of selected species in number of individuals per 100m towed for data collected 2010-2018. Explain models..."),
+                              br(),
+                              "Presence/Absence Graph",
+                              p("This graph shows..."),
+                              plotOutput(outputId = "pres_abs_plot"),
+                              p(strong("Figure 2."), "Probability of occcurence of selected species during the year for data collected 2010-2018. Presence or absence of selected species is shown by black points. Black line indicates...")
+                            ))),
+                 tabPanel("Data",
+                          "Data Tables",
+                          DT::dataTableOutput(outputId = "monthly_table"),
+                          DT::dataTableOutput(outputId = "table"))
                           )
 
 # 3. Server
@@ -218,7 +234,8 @@ server <- function(input, output) {
       geom_ribbon(aes(x = doy, 
                      ymin = abun_mod_pos_fit - abun_mod_pos_se, 
                       ymax = abun_mod_pos_fit + abun_mod_pos_se), 
-                  alpha = 0.3, fill = "red")
+                  alpha = 0.3, fill = "red") +
+      theme_minimal()
   })
   
   pres_plot <- reactive({
@@ -279,7 +296,8 @@ server <- function(input, output) {
       geom_line(aes(x = doy,y = pres_abs_blr_probability)) +
       geom_ribbon(aes(x = doy, 
                       ymin = pres_abs_blr_probability - pres_abs_blr_se,
-                      ymax = pres_abs_blr_probability + pres_abs_blr_se), alpha = 0.3)
+                      ymax = pres_abs_blr_probability + pres_abs_blr_se), alpha = 0.3) +
+      theme_minimal()
     
   })
   
