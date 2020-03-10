@@ -11,8 +11,6 @@ library(shinythemes)
 library(lubridate)
 library(DT)
 library(kableExtra)
-library(paletteer)
-library(cartography)
 
 
 # Read in the Data
@@ -37,6 +35,7 @@ ui <- navbarPage(title=div(img(src="lab_logo.png", width = 80, height = 80),"Sea
                             }
                            .navbar {min-height:60px !important;}')),
                  ),
+                 selected = "About",
                  theme = shinytheme("spacelab"),
                  tabPanel("About",
                           tags$head(tags$style( HTML(' .nav {margin-top:30px;}'))),
@@ -62,27 +61,27 @@ ui <- navbarPage(title=div(img(src="lab_logo.png", width = 80, height = 80),"Sea
                  tabPanel("Explore the Catch",
                           sidebarLayout(
                             sidebarPanel(# dropdown menu for species
-                                         selectInput(inputId = "species",
-                                                     label = "Species:",
-                                                     choices = c(unique(trawl$field_id)),
-                                                     selected = "pinfish"),
-                                         #biomass/catch selection
-                                         radioButtons("data_type",
-                                                      label = "Data Type:",
-                                                      choiceNames = c("Abundance", "Biomass"),
-                                                      choiceValues = c("catch_100m", "biomass_100m")),
-                                         # habitat checkbox
-                                         checkboxGroupInput("habitat",
-                                                            label = "Habitat(s):",
-                                                            choices = c(unique(trawl$habitat)),
-                                                            selected = "sea grass"),
-                                         # date slider
-                                         sliderInput("date",
-                                                     label = "Date Range:",
-                                                     min = as.Date("2010-07-01"), 
-                                                     max = as.Date("2017-11-17"),
-                                                     value = c(as.Date("2010-07-01"), as.Date("2017-11-17")),
-                                                     timeFormat = "%F")),
+                              selectInput(inputId = "species",
+                                          label = "Species:",
+                                          choices = c(sort(unique(trawl$field_id))),
+                                          selected = "pinfish"),
+                              #biomass/catch selection
+                              radioButtons("data_type",
+                                           label = "Data Type:",
+                                           choiceNames = c("Abundance", "Biomass"),
+                                           choiceValues = c("catch_100m", "biomass_100m")),
+                              # habitat checkbox
+                              checkboxGroupInput("habitat",
+                                                 label = "Habitat(s):",
+                                                 choices = c(sort(unique(trawl$habitat))),
+                                                 selected = "sea grass"),
+                              # date slider
+                              sliderInput("date",
+                                          label = "Date Range:",
+                                          min = as.Date("2010-07-01"), 
+                                          max = as.Date("2017-11-17"),
+                                          value = c(as.Date("2010-07-01"), as.Date("2017-11-17")),
+                                          timeFormat = "%F")),
                             mainPanel(
                               h4("Exploring catch per unit effort in estuarine habitats"),
                               p("These graphs illustrate trends in catch per unit effort for the variables selected, where effort is standardized by each 100 meters towed."),
@@ -91,48 +90,40 @@ ui <- navbarPage(title=div(img(src="lab_logo.png", width = 80, height = 80),"Sea
                               br(),
                               plotOutput(outputId = "cpue_monthly_plot"),
                               p(strong("Figure 2."), "Monthly changes in catch per unit effort (CPUE) for selected species, habitat, and date range. Darker shades indicate earlier years, and lighter shades indicate more recent years."),
-                              plotOutput(outputId = "monthly_averages_plot"),
-                              
-                              p(strong("Figure 3."), "Monthly average for catch per unit effort (CPUE) for selected species, habitat, and date range. Error bars indicate standard error."),
-                              br(),
                               plotOutput(outputId = "monthly_yearly_plot"),
                               br(),
-                              plotOutput(outputId = "monthly_averages_plot")))),
-
+                              plotOutput(outputId = "monthly_averages_plot"),
+                              p(strong("Figure 3."), "Monthly average for catch per unit effort (CPUE) for selected species, habitat, and 
+                                date range. Error bars indicate standard error.")
+                              ))),
                  tabPanel("Model",
                           sidebarLayout(
                             sidebarPanel(# more options here for modeling portion
-                                         selectInput(inputId = "species_modeling",
-                                                     label = "Select species:",
-                                                     choices = c(unique(trawl$field_id)),
-                                                     selected = "pinfish")),
-
+                              selectInput(inputId = "species_modeling",
+                                          label = "Select species:",
+                                          choices = c(sort(unique(trawl$field_id))),
+                                          selected = "pinfish")),
                             mainPanel("Abundance Graph",
-                                      plotOutput(outputId = "abundance_plot"),
-                                      p(strong("Figure 1."), "Change in abundance of selected species for a given day of year. Points indicate catch data for the selected species for individual trawls. Generalized linear models were used to estimate abundance on any given day based on all catches (black line) and positive catches (red line). Shaded areas represent standard error for each."),
-                                      br(),
-                                      br(),
-                                      "Presence/Absence Graph",
-                                      plotOutput(outputId = "pres_abs_plot"),
-                                      p(strong("Figure 2."), "Probability of presence of selected species for a given day of year. Points indicate presence/absence (1 or 0, respectively) of selected species during an individual trawl. Black line indicates binomial regression model predicting the probability of occurrence of a species on a given day, with the black shaded error illustrating standard error.")
-                            ))),
-                            mainPanel(
-                              h4("Modeling seasonal abundance of estuarine organisms in seagrass habitats "),
-                              p("These graphs show..."),
-                              plotOutput(outputId = "abundance_plot"),
-                              p(strong("Figure 1."), "Catch per unit effort of selected species in number of individuals per 100m towed for data collected 2010-2018. Explain models..."),
-                              br(),
-                              "Presence/Absence Graph",
-                              p("This graph shows..."),
-                              plotOutput(outputId = "pres_abs_plot"),
-                              p(strong("Figure 2."), "Probability of occcurence of selected species during the year for data collected 2010-2018. Presence or absence of selected species is shown by black points. Black line indicates...")
-                            ),
+                                     plotOutput(outputId = "abundance_plot"),
+                                     p(strong("Figure 1."), "Change in abundance of selected species for a given day 
+                                        of year. Points indicate catch data for the selected species for individual trawls. 
+                                        Generalized linear models were used to estimate abundance on any given day 
+                                        based on all catches (black line) and positive catches (red line). Shaded areas 
+                                        represent standard error for each."),
+                                     br(),
+                                     br(),
+                                     "Presence/Absence Graph",
+                                     plotOutput(outputId = "pres_abs_plot"),
+                                     p(strong("Figure 2."), "Probability of presence of selected species for a given 
+                                        day of year. Points indicate presence/absence (1 or 0, respectively) of selected 
+                                        species during an individual trawl. Black line indicates binomial regression model 
+                                        predicting the probability of occurrence of a species on a given day, with the 
+                                        black shaded error illustrating standard error.")))),
                  tabPanel("Data",
                           "Data Tables",
                           DT::dataTableOutput(outputId = "monthly_table"),
                           DT::dataTableOutput(outputId = "table"))
-
-                          )
+)
 
 # 3. Server
 
@@ -142,7 +133,7 @@ server <- function(input, output) {
   # CATCH EXPLORATION PAGE
   ######################################################
   
-  # Selection 1: selections for first two plots
+  # Selection 1: 
   cpue_select <- reactive({
     trawl %>% 
       filter(field_id == input$species) %>% 
@@ -185,9 +176,12 @@ server <- function(input, output) {
         y = "Catch (# individuals or grams per 100m towed)"
       ) +
       theme_minimal() +
-      scale_color_paletteer_c("ggthemes::Blue")
+      scale_color_paletteer_c("ggthemes::Blue") +
+      theme(
+        axis.title.y = element_text(size = 13)
+      )
   })
-
+  
   
   # Output 2: cpue_monthly_plot
   output$cpue_monthly_plot <- renderPlot({
@@ -199,19 +193,30 @@ server <- function(input, output) {
         color = "Year"
       ) +
       theme_minimal() +
-      scale_color_paletteer_c("ggthemes::Blue")
+      scale_color_paletteer_c("ggthemes::Blue") +
+      theme(
+        axis.title.y = element_text(size = 13)
+      )
   })
   
   # Output 3: monthly_yearly_plot
+  blue_scale <- c("#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b")
   output$monthly_yearly_plot <- renderPlot({
     ggplot(data = month()) +
       geom_point(aes(x = month, y = mean, color = yr), size = 3) +
       geom_line(aes(x = month, y = mean, group = yr, color = yr)) +
       theme_minimal() +
-      scale_color_paletteer_d("cartography::blue.pal")
+      scale_color_manual(values = blue_scale) +
+      labs(
+        x = NULL,
+        y = "Mean catch (# individuals or grams per 100m towed)"
+      ) +
+      theme(
+        axis.title.y = element_text(size = 13)
+      )
   })
   
-  # Output 3: monthly_averages_plot
+  # Output 4: monthly_averages_plot
   output$monthly_averages_plot <- renderPlot({
     ggplot(data = average(), group = year) +
       geom_point(aes(x = month, y = mean), size = 3) +
@@ -220,8 +225,12 @@ server <- function(input, output) {
         x = NULL,
         y = "Mean Catch (# individuals or grams per 100m towed)"
       ) +
-      theme_minimal()
+      theme_minimal() +
+      theme(
+        axis.title.y = element_text(size = 13)
+      )
   })
+  
   
   # Output 4: other table for testing
   output$monthly_table <- DT::renderDataTable({data.frame(average())})
@@ -238,65 +247,65 @@ server <- function(input, output) {
     trawl_model <- trawl %>%
       filter(field_id == input$species_modeling) %>% 
       filter(habitat == "sea grass") # Maybe change later if needed
-  
+    
     # Fit the models to the data:
     # Abundance Model
     abun_mod_all <- lm(log(catch_100m + 1) ~ doy + I(doy^2) + I(doy^3), data = trawl_model)
-  
+    
     # Abundance Model for only the positive catches
     abun_mod_pos <- lm(log(catch_100m + 1) ~ doy + I(doy^2) + I(doy^3), data = trawl_model %>% 
-                        filter(pres_abs == 1))
+                         filter(pres_abs == 1))
     
     # Binomial Presence/Absence Model
-     pres_abs_blr <- glm(pres_abs ~ doy + I(doy^2), family = "binomial", data = trawl_model)
-  
+    pres_abs_blr <- glm(pres_abs ~ doy + I(doy^2), family = "binomial", data = trawl_model)
+    
     # Create vector to predict values
     predict_doy <- data.frame(doy = c(min(trawl_model$doy):max(trawl_model$doy)))
-  
+    
     # Make & save predictions
     #model_predict <- data.frame() # just to make sure data frame is empty when testing code
-      model_predict <- data.frame(cbind(
+    model_predict <- data.frame(cbind(
       predict_doy,
       abun_mod_all_predict = predict(abun_mod_all, predict_doy, se.fit = TRUE),
       abun_mod_pos_predict = predict(abun_mod_pos, predict_doy, se.fit = TRUE),
       pres_abs_blr_predict = predict(pres_abs_blr, newdata = predict_doy, type = "response", se.fit = TRUE)))
-  
+    
     # Rename and remove some crazy columns
     model_predict <- model_predict %>% 
       select(-abun_mod_all_predict.residual.scale, 
-            -abun_mod_pos_predict.residual.scale, 
-            -pres_abs_blr_predict.residual.scale,
-            -abun_mod_all_predict.df,
-            -abun_mod_pos_predict.df) %>% 
+             -abun_mod_pos_predict.residual.scale, 
+             -pres_abs_blr_predict.residual.scale,
+             -abun_mod_all_predict.df,
+             -abun_mod_pos_predict.df) %>% 
       rename(abun_mod_all_fit = abun_mod_all_predict.fit,
-            abun_mod_all_se = abun_mod_all_predict.se.fit,
-            abun_mod_pos_fit = abun_mod_pos_predict.fit,
-            abun_mod_pos_se = abun_mod_pos_predict.se.fit,
-            pres_abs_blr_probability = pres_abs_blr_predict.fit,
+             abun_mod_all_se = abun_mod_all_predict.se.fit,
+             abun_mod_pos_fit = abun_mod_pos_predict.fit,
+             abun_mod_pos_se = abun_mod_pos_predict.se.fit,
+             pres_abs_blr_probability = pres_abs_blr_predict.fit,
              pres_abs_blr_se = pres_abs_blr_predict.se.fit)
-  
-  # Adust range of predictions for when the species is present for the present data - convert others to NA - we don't care what the model predicts outside of the range that went into making the model - we might need to do this in the actual app because of how the model is calculated, but maybe not... don't need for pinfish because is almost always present
+    
+    # Adust range of predictions for when the species is present for the present data - convert others to NA - we don't care what the model predicts outside of the range that went into making the model - we might need to do this in the actual app because of how the model is calculated, but maybe not... don't need for pinfish because is almost always present
     present <- trawl_model %>% 
       filter(pres_abs == 1)
-  
+    
     range_adj <- c(min(present$doy),max(present$doy))
-  
+    
     model_predict$abun_mod_pos_fit[model_predict$doy < range_adj[1]] <- NA
     model_predict$abun_mod_pos_fit[model_predict$doy > range_adj[2]] <- NA
     model_predict$abun_mod_pos_se[model_predict$doy < range_adj[1]] <- NA
     model_predict$abun_mod_pos_se[model_predict$doy > range_adj[2]] <- NA
-  
+    
     ggplot(data = model_predict) +
       geom_point(data = trawl_model, aes(x = doy,y = log(catch_100m + 1))) +
       geom_line(aes(x = doy,y = abun_mod_all_fit)) +
       geom_ribbon(aes(x = doy, 
-                     ymin = abun_mod_all_fit - abun_mod_all_se,
+                      ymin = abun_mod_all_fit - abun_mod_all_se,
                       ymax = abun_mod_all_fit + abun_mod_all_se), alpha = 0.3) +
-     geom_line(aes(x = doy, y = abun_mod_pos_fit), color = "red") +
+      geom_line(aes(x = doy, y = abun_mod_pos_fit), color = "blue") +
       geom_ribbon(aes(x = doy, 
-                     ymin = abun_mod_pos_fit - abun_mod_pos_se, 
+                      ymin = abun_mod_pos_fit - abun_mod_pos_se, 
                       ymax = abun_mod_pos_fit + abun_mod_pos_se), 
-                  alpha = 0.3, fill = "red") +
+                  alpha = 0.3, fill = "blue") +
       theme_minimal()
   })
   
@@ -373,7 +382,7 @@ server <- function(input, output) {
   output$pres_abs_plot <- renderPlot({
     pres_plot()
   })
- 
+  
   
   
 }
