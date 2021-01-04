@@ -11,7 +11,8 @@ library(shinythemes)
 library(lubridate)
 library(DT)
 library(kableExtra)
-
+library(paletteer)
+library(ggthemes)
 
 # Read in the Data
 
@@ -92,8 +93,9 @@ ui <- navbarPage(title=div(img(src="lab_logo.png", width = 80, height = 80),"Sea
                               p(strong("Figure 2."), "Monthly changes in catch per unit effort (CPUE) for selected species, habitat, and date range. Darker shades indicate earlier years, and lighter shades indicate more recent years."),
                               plotOutput(outputId = "monthly_yearly_plot"),
                               br(),
+                              p(strong("Figure 3."), "Average monthly changes in catch per unit effort (CPUE) for selected species, habitat, and date range. Darker shades indicate earlier years, and lighter shades indicate more recent years."),
                               plotOutput(outputId = "monthly_averages_plot"),
-                              p(strong("Figure 3."), "Monthly average for catch per unit effort (CPUE) for selected species, habitat, and 
+                              p(strong("Figure 4."), "Monthly average for catch per unit effort (CPUE) for selected species, habitat, and 
                                 date range. Error bars indicate standard error.")
                               ))),
                  tabPanel("Model",
@@ -176,7 +178,7 @@ server <- function(input, output) {
         y = "Catch (# individuals or grams per 100m towed)"
       ) +
       theme_minimal() +
-      scale_color_paletteer_c("ggthemes::Blue") +
+      paletteer::scale_color_paletteer_c("ggthemes::Blue") +
       theme(
         axis.title.y = element_text(size = 13)
       )
@@ -193,7 +195,7 @@ server <- function(input, output) {
         color = "Year"
       ) +
       theme_minimal() +
-      scale_color_paletteer_c("ggthemes::Blue") +
+      paletteer::scale_color_paletteer_c("ggthemes::Blue") +
       theme(
         axis.title.y = element_text(size = 13)
       )
